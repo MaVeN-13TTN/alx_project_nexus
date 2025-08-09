@@ -1,0 +1,104 @@
+name: Docker Compose Validation
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "docker-compose*.yml"
+      - "nginx/**"
+      - ".env*.example"
+  workflow_dispatch:
+
+jobs:
+  validate-docker-compose:
+    runs-on: ubuntu-latest
+    name: Validate Docker Compose Configuration
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Docker Compose
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Validate development docker-compose
+        run: |
+          if ! docker-compose -f docker-compose.yml config > /dev/null 2>&1; then
+            echo "Error: Development docker-compose.yml validation failed"
+            exit 1
+          fi
+          echo "✅ Development docker-compose.yml validated successfully"
+
+      - name: Validate production docker-compose
+        run: |
+          if ! docker-compose -f docker-compose.prod.yml config > /dev/null 2>&1; then
+            echo "Error: Production docker-compose.prod.yml validation failed"
+            exit 1
+          fi
+          echo "✅ Production docker-compose.prod.yml validated successfully"
+
+      - name: Validate VPS docker-compose
+        run: |
+          if ! docker-compose -f docker-compose.vps.yml config > /dev/null 2>&1; then
+            echo "Error: VPS docker-compose.vps.yml validation failed"
+            exit 1
+          fi
+          echo "✅ VPS docker-compose.vps.yml validated successfully"
+
+      - name: Validate environment templates
+        run: |
+          if [ ! -f ".env.example" ]; then
+            echo "Warning: .env.example not found"
+          else
+            echo "✅ .env.example found"
+          fi
+
+          if [ ! -f ".env.vps.example" ]; then
+            echo "Warning: .env.vps.example not found"
+          else
+            echo "✅ .env.vps.example found"
+          fi
+
+  test-docker-build:
+    runs-on: ubuntu-latest
+    name: Test Docker Build Process
+    needs: validate-docker-compose
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: test-image:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test container startup
+        run: |
+          # Create a test environment file
+          cat > .env.test << EOF
+          DEBUG=True
+          SECRET_KEY=test-secret-key-for-ci-testing
+          DB_NAME=test_db
+          DB_USER=test_user
+          DB_PASSWORD=test_pass
+          DB_HOST=localhost
+          DB_PORT=5432
+          REDIS_URL=redis://localhost:6379/0
+          TMDB_API_KEY=test-api-key
+          ALLOWED_HOSTS=localhost,127.0.0.1
+          EOF
+
+          # Test that the image can start (without full services)
+          docker run --rm --env-file .env.test test-image:latest python -c "import django; print('Django import successful')"
+
+          echo "✅ Container startup test passed"
