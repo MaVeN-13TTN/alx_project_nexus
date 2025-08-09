@@ -59,6 +59,10 @@ class User(AbstractUser):
         auto_now=True, help_text="Last profile update timestamp"
     )
 
+    # Use email as the username field for authentication
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
+
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
