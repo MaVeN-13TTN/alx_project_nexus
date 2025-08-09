@@ -22,4 +22,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/auth/", include("apps.authentication.urls")),
     path("api/v1/", include("apps.movies.urls")),
+    path("api/v1/favorites/", include("apps.favorites.urls")),
+    path("api/v1/preferences/", include("apps.preferences.urls")),
 ]
