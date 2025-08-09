@@ -1,14 +1,20 @@
 """
 Development settings for Movie Recommendation Backend.
 
-These settings are used du# Additional development apps (commented out - install if needed)
-# INSTALLED_APPS += [
-#     'django_extensions',  # If installed
-# ] development and include debugging tools,
+These settings are used during development and include debugging tools,
 relaxed security settings, and local database configurations.
 """
 
+import os
 from .base import *
+from decouple import Config, RepositoryEnv
+
+# Load development-specific environment variables
+DOTENV_FILE = BASE_DIR / ".env.dev"
+if DOTENV_FILE.exists():
+    env_config = Config(RepositoryEnv(str(DOTENV_FILE)))
+else:
+    env_config = config  # fallback to default config
 
 # Development-specific settings
 DEBUG = True
@@ -109,8 +115,9 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 
 # TMDb API settings (use from environment)
-TMDB_API_KEY = config("TMDB_API_KEY", default="")
+TMDB_API_KEY = env_config("TMDB_API_KEY", default="")
 if not TMDB_API_KEY:
     print("⚠️  WARNING: TMDB_API_KEY not set. TMDb integration will not work.")
+    print("💡 Please add your TMDb API key to .env.dev file")
 
 print("🚀 Running in DEVELOPMENT mode")
