@@ -7,8 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Create a non-root user first
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create a non-root user with home directory
+RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 
 # Set work directory and change ownership
 WORKDIR /app
@@ -31,20 +31,17 @@ RUN apt-get update \
     && rm -rf /tmp/* \
     && rm -rf /var/tmp/*
 
+# Copy requirements and install Python dependencies as root to avoid permission issues
+COPY requirements*.txt ./
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip check
+
 # Switch to non-root user
 USER appuser
 
-# Install Python dependencies as non-root user with security updates
-COPY --chown=appuser:appuser requirements*.txt ./
-RUN pip install --no-cache-dir --user --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir --user -r requirements.txt \
-    && pip check
-
 # Copy project files
 COPY --chown=appuser:appuser . .
-
-# Add user's local bin to PATH for installed packages
-ENV PATH="/home/appuser/.local/bin:${PATH}"
 
 # Collect static files
 RUN python manage.py collectstatic --noinput || echo "Django not ready yet"
