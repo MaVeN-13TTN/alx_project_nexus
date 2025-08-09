@@ -36,7 +36,9 @@ services:
 
   # Django Application
   web:
-    image: ghcr.io/maven-13ttn/alx_project_nexus:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: nexus_web
     restart: unless-stopped
     environment:
