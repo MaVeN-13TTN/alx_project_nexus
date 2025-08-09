@@ -464,6 +464,25 @@ class TMDbClient:
             endpoint, params, cache_key, self.CACHE_TIMEOUTS["search"]
         )
 
+    def get_similar_movies(self, movie_id: int, page: int = 1) -> Dict[str, Any]:
+        """
+        Get movies similar to a specific movie.
+
+        Args:
+            movie_id: TMDb movie ID
+            page: Page number (1-indexed)
+
+        Returns:
+            Similar movies data
+        """
+        cache_key = f"similar_movies_{movie_id}_{page}"
+        endpoint = f"movie/{movie_id}/similar"
+        params = {"page": page}
+
+        return self._make_request(
+            endpoint, params, cache_key, self.CACHE_TIMEOUTS["search"]
+        )
+
 
 # Global client instance
 tmdb_client = TMDbClient()

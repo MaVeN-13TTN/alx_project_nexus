@@ -27,6 +27,7 @@ from .serializers import (
     MovieSimilaritySerializer
 )
 from .basic_engine import BasicRecommendationEngine
+from .advanced_engine import AdvancedRecommendationEngine
 
 User = get_user_model()
 
@@ -70,12 +71,21 @@ class RecommendationListView(APIView):
         recommendation_type = request.query_params.get('type', 'hybrid')
         limit = int(request.query_params.get('limit', 20))
         force_refresh = request.query_params.get('force_refresh', 'false').lower() == 'true'
+        algorithm = request.query_params.get('algorithm', 'basic')  # 'basic' or 'advanced'
         
-        # Validate parameters
-        valid_types = ['content', 'collaborative', 'hybrid', 'trending', 'similar']
+        # Validate parameters based on algorithm type
+        if algorithm == 'advanced':
+            valid_types = [
+                'matrix_factorization', 'neural_cf', 'content_based_advanced',
+                'collaborative_knn', 'sequential', 'ensemble', 'hybrid',
+                'trending', 'content'  # Also support basic types
+            ]
+        else:
+            valid_types = ['content', 'collaborative', 'hybrid', 'trending', 'similar']
+            
         if recommendation_type not in valid_types:
             return Response(
-                {'error': f'Invalid recommendation type. Must be one of: {", ".join(valid_types)}'},
+                {'error': f'Invalid recommendation type for {algorithm} algorithm. Must be one of: {", ".join(valid_types)}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -86,6 +96,22 @@ class RecommendationListView(APIView):
             )
         
         try:
+            # Choose engine based on algorithm parameter
+            if algorithm == 'advanced':
+                engine = AdvancedRecommendationEngine()
+                # Validate advanced algorithm types
+                advanced_types = [
+                    'matrix_factorization', 'neural_cf', 'content_based_advanced',
+                    'collaborative_knn', 'sequential', 'ensemble', 'hybrid'
+                ]
+                if recommendation_type not in advanced_types and recommendation_type not in ['trending', 'content']:
+                    recommendation_type = 'hybrid'
+            else:
+                engine = BasicRecommendationEngine()
+                # Basic engine supports: trending, content, hybrid
+                if recommendation_type not in ['trending', 'content', 'hybrid']:
+                    recommendation_type = 'hybrid'
+                    
             # Get recommendations using the engine
             engine = BasicRecommendationEngine()
             recommendations = engine.get_recommendations(
