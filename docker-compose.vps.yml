@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    container_name: nexus_postgres
+    environment:
+      POSTGRES_DB: movie_recommendation_prod
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    restart: unless-stopped
+    networks:
+      - nexus_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nexus_redis
+    restart: unless-stopped
+    networks:
+      - nexus_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Django Application
+  web:
+    image: ghcr.io/maven-13ttn/alx_project_nexus:latest
+    container_name: nexus_web
+    restart: unless-stopped
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY}
+      - DB_NAME=movie_recommendation_prod
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_URL=redis://redis:6379/0
+      - TMDB_API_KEY=${TMDB_API_KEY}
+      - ALLOWED_HOSTS=nexus.k1nyanjui.com,161.97.116.5,localhost
+      - CSRF_TRUSTED_ORIGINS=https://nexus.k1nyanjui.com
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nexus_network
+      - nginx_proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      # Nginx Proxy Manager labels
+      - "traefik.enable=true"
+      - "traefik.http.routers.nexus.rule=Host(`nexus.k1nyanjui.com`)"
+      - "traefik.http.routers.nexus.tls=true"
+      - "traefik.http.routers.nexus.tls.certresolver=letsencrypt"
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  nexus_network:
+    driver: bridge
+  nginx_proxy:
+    external: true
+    name: nginx-proxy
