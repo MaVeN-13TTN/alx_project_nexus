@@ -1,0 +1,58 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: movie-recommendation-staging
+  namespace: argocd
+  labels:
+    app: movie-recommendation
+    environment: staging
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/MaVeN-13TTN/alx_project_nexus
+    targetRevision: main
+    path: gitops/staging
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 3
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: movie-recommendation-production
+  namespace: argocd
+  labels:
+    app: movie-recommendation
+    environment: production
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/MaVeN-13TTN/alx_project_nexus
+    targetRevision: main
+    path: gitops/production
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: production
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 5
