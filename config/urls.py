@@ -24,4 +24,5 @@ urlpatterns = [
     path("api/v1/", include("apps.movies.urls")),
     path("api/v1/favorites/", include("apps.favorites.urls")),
     path("api/v1/preferences/", include("apps.preferences.urls")),
+    path("api/v1/recommendations/", include("apps.recommendations.urls")),
 ]
