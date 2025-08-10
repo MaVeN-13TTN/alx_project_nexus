@@ -94,9 +94,7 @@ LOGGING = {
 }
 
 # Additional development apps
-INSTALLED_APPS += [
-    "django_extensions",  # If installed
-]
+INSTALLED_APPS += ["django_extensions"]
 
 # DRF settings for development
 REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"] = [
