@@ -49,8 +49,8 @@ services:
     container_name: nexus_vps_web
     restart: unless-stopped
     environment:
-      - DJANGO_SETTINGS_MODULE=config.settings.multi_environment
-      - ENVIRONMENT=production
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.multi_environment}
+      - ENVIRONMENT=${ENVIRONMENT:-production}
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME:-movie_recommendation_prod}
