@@ -1,3 +1,7 @@
+# Multi-Environment VPS Deployment Configuration
+# This configuration serves both staging and production environments
+# from a single application instance using domain-based routing
+
 services:
   # PostgreSQL Database for VPS (Multi-Environment)
   db:
@@ -20,7 +24,7 @@ services:
       - postgres_data:/var/lib/postgresql/data/
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     ports:
-      - "127.0.0.1:5432:5432" # Added for local debugging/backups
+      - "127.0.0.1:5432:5432" # For local debugging/backups
     restart: unless-stopped
     networks:
       - nexus_network
@@ -35,7 +39,7 @@ services:
     image: redis:7-alpine
     container_name: nexus_vps_redis
     ports:
-      - "127.0.0.1:6379:6379" # Added for local debugging
+      - "127.0.0.1:6379:6379" # For local debugging
     restart: unless-stopped
     networks:
       - nexus_network
@@ -45,20 +49,19 @@ services:
       timeout: 5s
       retries: 5
 
-  # Django Application for VPS
+  # Django Application for VPS (Multi-Environment)
   web:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: nexus_vps_web
     ports:
-      - "127.0.0.1:8000:8000" # CRITICAL FIX: Map container port 8000 to host port 8000
+      - "127.0.0.1:8000:8000" # CRITICAL: Map to host for Nginx proxy
     env_file:
       - .env
-    restart: unless-stopped
     environment:
-      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.multi_environment}
-      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - DJANGO_SETTINGS_MODULE=config.settings.multi_environment
+      - ENVIRONMENT=multi
       - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME:-movie_recommendation_prod}
@@ -67,12 +70,9 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-nexus.k1nyanjui.com,staging-nexus.k1nyanjui.com,161.97.116.5,localhost}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
-      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False} # Changed to False since Nginx handles SSL
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False} # Nginx handles SSL
       - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-True}
       - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-True}
-      - USE_X_FORWARDED_HOST=True # Added for proper proxy headers
-      - USE_X_FORWARDED_PORT=True # Added for proper proxy headers
-      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https # Added for proxy SSL detection
     depends_on:
       db:
         condition: service_healthy
@@ -80,35 +80,35 @@ services:
         condition: service_healthy
     networks:
       - nexus_network
-      - nginx_proxy
     volumes:
-      - ./logs:/app/logs # Added for persistent logging
-      - ./static:/app/static # Added for static files
-      - ./media:/app/media # Added for media files
+      - ./logs:/app/logs # Persistent logging
+      - ./static:/app/static # Static files
+      - ./media:/app/media # Media files
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    labels:
-      # Nginx Proxy Manager labels
-      - "traefik.enable=true"
-      - "traefik.http.routers.nexus.rule=Host(`nexus.k1nyanjui.com`)"
-      - "traefik.http.routers.nexus.tls=true"
-      - "traefik.http.routers.nexus.tls.certresolver=letsencrypt"
     command: >
       sh -c "
         echo 'Waiting for database...' &&
         while ! nc -z db 5432; do sleep 1; done &&
         echo 'Database is ready!' &&
-        echo 'Running migrations...' &&
+        echo 'Running production migrations...' &&
         python manage.py migrate --noinput &&
+        echo 'Running staging migrations...' &&
+        HTTP_HOST=staging-nexus.k1nyanjui.com python manage.py migrate --noinput &&
         echo 'Collecting static files...' &&
         python manage.py collectstatic --noinput &&
         echo 'Creating superuser if needed...' &&
-        python manage.py shell -c \"from django.contrib.auth import get_user_model; User = get_user_model(); User.objects.filter(username='admin').exists() or User.objects.create_superuser('admin', 'admin@example.com', 'admin123')\" || true &&
-        echo 'Starting Gunicorn...' &&
+        python manage.py shell -c \"
+        from django.contrib.auth import get_user_model;
+        User = get_user_model();
+        User.objects.filter(username='admin').exists() or 
+        User.objects.create_superuser('admin', 'admin@nexus.com', 'admin123')
+        \" || true &&
+        echo 'Starting Gunicorn server...' &&
         gunicorn config.wsgi:application 
           --bind 0.0.0.0:8000 
           --workers 4 
@@ -116,9 +116,11 @@ services:
           --timeout 120 
           --max-requests 1000
           --max-requests-jitter 100
-          --preload
           --log-level info
+          --access-logfile - 
+          --error-logfile -
       "
+    restart: unless-stopped
 
 volumes:
   postgres_data:
@@ -127,6 +129,3 @@ volumes:
 networks:
   nexus_network:
     driver: bridge
-  nginx_proxy:
-    external: true
-    name: nginx-proxy
