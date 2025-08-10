@@ -3,6 +3,8 @@ services:
   db:
     image: postgres:15
     container_name: nexus_vps_postgres
+    env_file:
+      - .env
     environment:
       POSTGRES_DB: ${DB_NAME:-movie_recommendation_prod}
       POSTGRES_USER: ${DB_USER}
@@ -51,6 +53,8 @@ services:
     container_name: nexus_vps_web
     ports:
       - "127.0.0.1:8000:8000" # CRITICAL FIX: Map container port 8000 to host port 8000
+    env_file:
+      - .env
     restart: unless-stopped
     environment:
       - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.multi_environment}
