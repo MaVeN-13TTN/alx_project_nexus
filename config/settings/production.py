@@ -97,8 +97,8 @@ LOGGING = {
             "style": "{",
         },
         "json": {
-            "format": '{"level": "{levelname}", "time": "{asctime}", "module": "{module}", "message": "{message}"}',
-            "style": "{",
+            "format": '{"level": "%(levelname)s", "time": "%(asctime)s", "module": "%(module)s", "message": "%(message)s"}',
+            "style": "%",
         },
     },
     "handlers": {
