@@ -17,6 +17,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "127.0.0.1:5432:5432" # Added for local debugging/backups
     restart: unless-stopped
     networks:
       - nexus_network
@@ -30,6 +32,8 @@ services:
   redis:
     image: redis:7-alpine
     container_name: nexus_vps_redis
+    ports:
+      - "127.0.0.1:6379:6379" # Added for local debugging
     restart: unless-stopped
     networks:
       - nexus_network
@@ -45,6 +49,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: nexus_vps_web
+    ports:
+      - "127.0.0.1:8000:8000" # CRITICAL FIX: Map container port 8000 to host port 8000
     restart: unless-stopped
     environment:
       - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings.multi_environment}
@@ -57,9 +63,12 @@ services:
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-nexus.k1nyanjui.com,staging-nexus.k1nyanjui.com,161.97.116.5,localhost}
       - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
-      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-True}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-False} # Changed to False since Nginx handles SSL
       - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-True}
       - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-True}
+      - USE_X_FORWARDED_HOST=True # Added for proper proxy headers
+      - USE_X_FORWARDED_PORT=True # Added for proper proxy headers
+      - SECURE_PROXY_SSL_HEADER=HTTP_X_FORWARDED_PROTO,https # Added for proxy SSL detection
     depends_on:
       db:
         condition: service_healthy
@@ -68,6 +77,10 @@ services:
     networks:
       - nexus_network
       - nginx_proxy
+    volumes:
+      - ./logs:/app/logs # Added for persistent logging
+      - ./static:/app/static # Added for static files
+      - ./media:/app/media # Added for media files
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
@@ -80,6 +93,27 @@ services:
       - "traefik.http.routers.nexus.rule=Host(`nexus.k1nyanjui.com`)"
       - "traefik.http.routers.nexus.tls=true"
       - "traefik.http.routers.nexus.tls.certresolver=letsencrypt"
+    command: >
+      sh -c "
+        echo 'Waiting for database...' &&
+        python manage.py wait_for_db &&
+        echo 'Running migrations...' &&
+        python manage.py migrate --noinput &&
+        echo 'Collecting static files...' &&
+        python manage.py collectstatic --noinput &&
+        echo 'Starting Gunicorn...' &&
+        gunicorn config.wsgi:application 
+          --bind 0.0.0.0:8000 
+          --workers 4 
+          --threads 4 
+          --worker-class gthread 
+          --worker-tmp-dir /dev/shm 
+          --access-logfile /app/logs/access.log 
+          --error-logfile /app/logs/error.log 
+          --log-level info 
+          --timeout 120 
+          --reload
+      "
 
 volumes:
   postgres_data:
