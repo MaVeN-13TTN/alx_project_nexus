@@ -14,6 +14,9 @@ RUN groupadd -r appuser && useradd -r -g appuser -m appuser
 WORKDIR /app
 RUN chown -R appuser:appuser /app
 
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs && chmod 755 /app/logs
+
 # Install system dependencies with security updates
 RUN apt-get update \
     && apt-get upgrade -y \

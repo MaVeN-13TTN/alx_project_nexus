@@ -13,16 +13,10 @@ services:
       POSTGRES_DB: ${DB_NAME:-movie_recommendation_prod}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    command: |
-      bash -c '
-      docker-entrypoint.sh postgres &
-      sleep 10
-      createdb -U ${DB_USER} movie_recommendation_staging || true
-      wait
-      '
+    # Use init script to create staging database
     volumes:
       - postgres_data:/var/lib/postgresql/data/
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+      - ./scripts/init-staging-db.sh:/docker-entrypoint-initdb.d/init-staging-db.sh:ro
     ports:
       - "127.0.0.1:5432:5432" # For local debugging/backups
     restart: unless-stopped
@@ -81,7 +75,7 @@ services:
     networks:
       - nexus_network
     volumes:
-      - ./logs:/app/logs # Persistent logging
+      - app_logs:/app/logs # Persistent logging with proper permissions
       - ./static:/app/static # Static files
       - ./media:/app/media # Media files
     healthcheck:
@@ -90,40 +84,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    command: >
+    command: |
       sh -c "
-        echo 'Waiting for database...' &&
-        while ! nc -z db 5432; do sleep 1; done &&
-        echo 'Database is ready!' &&
-        echo 'Running production migrations...' &&
-        python manage.py migrate --noinput &&
-        echo 'Running staging migrations...' &&
-        HTTP_HOST=staging-nexus.k1nyanjui.com python manage.py migrate --noinput &&
-        echo 'Collecting static files...' &&
-        python manage.py collectstatic --noinput &&
-        echo 'Creating superuser if needed...' &&
+        echo 'Creating logs directory...'
+        mkdir -p /app/logs
+        chmod 755 /app/logs
+        echo 'Waiting for database...'
+        while ! nc -z db 5432; do sleep 1; done
+        echo 'Database is ready!'
+        echo 'Running production migrations...'
+        python manage.py migrate --noinput
+        echo 'Running staging migrations...'
+        HTTP_HOST=staging-nexus.k1nyanjui.com python manage.py migrate --noinput
+        echo 'Collecting static files...'
+        python manage.py collectstatic --noinput
+        echo 'Creating superuser if needed...'
         python manage.py shell -c \"
         from django.contrib.auth import get_user_model;
         User = get_user_model();
         User.objects.filter(username='admin').exists() or 
         User.objects.create_superuser('admin', 'admin@nexus.com', 'admin123')
-        \" || true &&
-        echo 'Starting Gunicorn server...' &&
-        gunicorn config.wsgi:application 
-          --bind 0.0.0.0:8000 
-          --workers 4 
-          --worker-class sync
-          --timeout 120 
-          --max-requests 1000
-          --max-requests-jitter 100
-          --log-level info
-          --access-logfile - 
-          --error-logfile -
+        \" || true
+        echo 'Starting Gunicorn server...'
+        exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --worker-class sync --timeout 120 --max-requests 1000 --max-requests-jitter 100 --log-level info --access-logfile - --error-logfile -
       "
     restart: unless-stopped
 
 volumes:
   postgres_data:
+    driver: local
+  app_logs:
     driver: local
 
 networks:
