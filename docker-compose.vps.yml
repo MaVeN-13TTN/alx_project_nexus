@@ -1,14 +1,21 @@
 version: "3.8"
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL Database for VPS (Multi-Environment)
   db:
     image: postgres:15
-    container_name: nexus_postgres
+    container_name: nexus_vps_postgres
     environment:
-      POSTGRES_DB: movie_recommendation_prod
+      POSTGRES_DB: ${DB_NAME:-movie_recommendation_prod}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+    command: |
+      bash -c '
+      docker-entrypoint.sh postgres &
+      sleep 10
+      createdb -U ${DB_USER} movie_recommendation_staging || true
+      wait
+      '
     volumes:
       - postgres_data:/var/lib/postgresql/data/
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
@@ -21,10 +28,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # Redis Cache
+  # Redis Cache for VPS
   redis:
     image: redis:7-alpine
-    container_name: nexus_redis
+    container_name: nexus_vps_redis
     restart: unless-stopped
     networks:
       - nexus_network
@@ -34,25 +41,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # Django Application
+  # Django Application for VPS
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: nexus_web
+    image: ghcr.io/maven-13ttn/alx_project_nexus:${IMAGE_TAG:-latest}
+    container_name: nexus_vps_web
     restart: unless-stopped
     environment:
-      - DEBUG=False
+      - DJANGO_SETTINGS_MODULE=config.settings.multi_environment
+      - ENVIRONMENT=production
+      - DEBUG=${DEBUG:-False}
       - SECRET_KEY=${SECRET_KEY}
-      - DB_NAME=movie_recommendation_prod
-      - DB_USER=${DB_USER}
-      - DB_PASSWORD=${DB_PASSWORD}
-      - DB_HOST=db
-      - DB_PORT=5432
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME:-movie_recommendation_prod}
       - REDIS_URL=redis://redis:6379/0
       - TMDB_API_KEY=${TMDB_API_KEY}
-      - ALLOWED_HOSTS=nexus.k1nyanjui.com,161.97.116.5,localhost
-      - CSRF_TRUSTED_ORIGINS=https://nexus.k1nyanjui.com
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-nexus.k1nyanjui.com,staging-nexus.k1nyanjui.com,161.97.116.5,localhost}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://nexus.k1nyanjui.com,https://staging-nexus.k1nyanjui.com}
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-True}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-True}
+      - CSRF_COOKIE_SECURE=${CSRF_COOKIE_SECURE:-True}
     depends_on:
       db:
         condition: service_healthy
