@@ -49,6 +49,7 @@ class MovieListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
     @extend_schema(
+        tags=["Movies"],
         summary="List movies from database",
         description="Get paginated list of movies from local database with optional filtering",
         parameters=[
@@ -144,6 +145,7 @@ class MovieDetailView(generics.RetrieveAPIView):
     lookup_field = "tmdb_id"
 
     @extend_schema(
+        tags=["Movies"],
         summary="Get movie details",
         description="Get detailed information about a specific movie by TMDb ID",
         responses={
@@ -173,6 +175,7 @@ class MovieDetailView(generics.RetrieveAPIView):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @extend_schema(
+    tags=["Movies"],
     summary="Get trending movies",
     description="Get trending movies from TMDb API",
     parameters=[
@@ -265,6 +268,7 @@ def trending_movies(request: Request) -> Response:
 @api_view(["GET"])
 @permission_classes([AllowAny])
 @extend_schema(
+    tags=["Movies"],
     summary="Get popular movies",
     description="Get popular movies from TMDb API",
     parameters=[

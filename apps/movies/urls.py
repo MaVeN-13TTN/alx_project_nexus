@@ -14,12 +14,12 @@ urlpatterns = [
     # Local database movie endpoints
     path("movies/", views.MovieListView.as_view(), name="movie-list"),
     path("movies/<int:tmdb_id>/", views.MovieDetailView.as_view(), name="movie-detail"),
-    # Genre endpoints
+    # Genre management endpoints
     path("genres/", views.GenreListView.as_view(), name="genre-list"),
     path("genres/sync/", views.sync_genres, name="genre-sync"),
-    # TMDb API endpoints
-    path("tmdb/trending/", views.trending_movies, name="trending-movies"),
-    path("tmdb/popular/", views.popular_movies, name="popular-movies"),
-    path("tmdb/search/", views.search_movies, name="search-movies"),
-    path("tmdb/discover/", views.discover_movies, name="discover-movies"),
+    # TMDb API integration endpoints
+    path("trending/", views.trending_movies, name="trending-movies"),
+    path("popular/", views.popular_movies, name="popular-movies"),
+    path("search/", views.search_movies, name="search-movies"),
+    path("discover/", views.discover_movies, name="discover-movies"),
 ]

@@ -215,7 +215,7 @@ class ViewingHistorySerializer(serializers.ModelSerializer):
 
     movie = serializers.StringRelatedField(read_only=True)
     movie_id = serializers.IntegerField(write_only=True)
-    rating_display = serializers.CharField(source="rating_display", read_only=True)
+    rating_display = serializers.CharField(read_only=True)
     was_completed = serializers.BooleanField(read_only=True)
 
     class Meta:

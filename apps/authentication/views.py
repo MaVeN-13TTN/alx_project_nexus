@@ -38,6 +38,7 @@ class UserRegistrationView(APIView):
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(
+        tags=["Authentication"],
         request=UserRegistrationSerializer,
         responses={
             201: OpenApiResponse(description="User registered successfully"),
@@ -100,6 +101,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
 
     @extend_schema(
+        tags=["Authentication"],
         summary="Obtain JWT tokens",
         description="Login with email and password to get access and refresh tokens.",
     )

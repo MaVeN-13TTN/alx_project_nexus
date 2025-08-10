@@ -21,7 +21,7 @@ SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-this-in-produc
 DEBUG = config("DEBUG", default=True, cast=bool)
 ALLOWED_HOSTS = config(
     "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1",
+    default="localhost,127.0.0.1,nexus.k1nyanjui.com",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 
@@ -185,7 +185,7 @@ SIMPLE_JWT = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     "CORS_ALLOWED_ORIGINS",
-    default="http://localhost:3000",
+    default="http://localhost:3000,https://nexus.k1nyanjui.com,http://nexus.k1nyanjui.com",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 CORS_ALLOW_CREDENTIALS = True
@@ -193,7 +193,7 @@ CORS_ALLOW_CREDENTIALS = True
 # CSRF Configuration
 CSRF_TRUSTED_ORIGINS = config(
     "CSRF_TRUSTED_ORIGINS",
-    default="http://localhost:3000",
+    default="http://localhost:3000,https://nexus.k1nyanjui.com,http://nexus.k1nyanjui.com",
     cast=lambda v: [s.strip() for s in v.split(",")],
 )
 
@@ -257,12 +257,77 @@ LOGGING = {
 # API Spectacular Configuration (OpenAPI/Swagger)
 SPECTACULAR_SETTINGS = {
     "TITLE": "Movie Recommendation API",
-    "DESCRIPTION": "A comprehensive RESTful API for movie recommendations and user management",
+    "DESCRIPTION": """
+    A comprehensive RESTful API for movie recommendations and user management.
+    
+    ## Features
+    - **JWT Authentication**: Secure user authentication with token-based auth
+    - **TMDb Integration**: Real-time movie data from The Movie Database
+    - **Advanced Recommendations**: Multiple algorithms including matrix factorization, neural collaborative filtering
+    - **User Management**: Comprehensive user profiles, preferences, and viewing history
+    - **Performance Optimized**: Redis caching and optimized database queries
+    
+    ## Authentication
+    This API uses JWT (JSON Web Tokens) for authentication. To access protected endpoints:
+    1. Register a new account or login at `/api/v1/auth/`
+    2. Include the access token in the Authorization header: `Bearer <your_token>`
+    
+    ## Rate Limiting
+    API requests are rate-limited to ensure fair usage. Please refer to response headers for current limits.
+    
+    ## Support
+    For technical support or questions, please refer to the project documentation.
+    """,
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SCHEMA_PATH_PREFIX": "/api/v1/",
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
+    "TAGS": [
+        {
+            "name": "Authentication",
+            "description": "User registration, login, and profile management",
+        },
+        {"name": "Movies", "description": "Movie data, search, and discovery"},
+        {"name": "Favorites", "description": "User's favorite movies management"},
+        {"name": "Preferences", "description": "User preferences and viewing history"},
+        {
+            "name": "Recommendations",
+            "description": "Movie recommendation algorithms and analytics",
+        },
+    ],
+    "SERVERS": [
+        {"url": "http://localhost:8000", "description": "Development server"},
+        {
+            "url": "https://nexus.k1nyanjui.com",
+            "description": "Production server",
+        },
+    ],
+    "EXTERNAL_DOCS": {
+        "description": "Project Documentation",
+        "url": "https://github.com/MaVeN-13TTN/alx_project_nexus",
+    },
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": False,
+        "filter": True,
+        "tryItOutEnabled": True,
+    },
+    "REDOC_UI_SETTINGS": {
+        "hideDownloadButton": False,
+        "hideHostname": False,
+        "hideLoading": False,
+        "hideSchemaPattern": True,
+        "simpleOneOfTypeLabel": True,
+    },
+    "PREPROCESSING_HOOKS": [],
+    "POSTPROCESSING_HOOKS": [],
+    "ENUM_NAME_OVERRIDES": {},
+    "AUTHENTICATION_WHITELIST": [
+        "rest_framework.authentication.SessionAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+    ],
 }
 
 # TMDb API Configuration
