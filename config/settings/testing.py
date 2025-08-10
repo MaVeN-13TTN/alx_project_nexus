@@ -9,7 +9,7 @@ from .base import *
 
 # Testing-specific settings
 DEBUG = False
-SECRET_KEY = "test-secret-key-for-testing-only"
+SECRET_KEY = config("SECRET_KEY", default="test-secret-key-for-testing-only")
 ALLOWED_HOSTS = ["testserver", "localhost", "127.0.0.1"]
 
 # Use in-memory SQLite for faster tests
@@ -33,9 +33,9 @@ CACHES = {
 # Email backend for testing (in-memory)
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
-# Password hashers (faster for testing)
+# Password hashers (faster for testing but still secure)
 PASSWORD_HASHERS = [
-    "django.contrib.auth.hashers.MD5PasswordHasher",  # Faster but less secure (testing only)
+    "django.contrib.auth.hashers.PBKDF2PasswordHasher",  # Secure and reasonably fast
 ]
 
 
