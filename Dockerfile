@@ -32,7 +32,7 @@ RUN apt-get update \
     && rm -rf /var/tmp/*
 
 # Copy requirements and install Python dependencies as root to avoid permission issues
-COPY requirements*.txt ./
+COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir -r requirements.txt \
     && pip check

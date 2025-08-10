@@ -1,54 +1,68 @@
 version: "3.8"
 
 services:
+  # PostgreSQL Database for Development
   db:
     image: postgres:15
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
+    container_name: nexus_dev_postgres
     environment:
-      POSTGRES_DB: movie_recommendation_dev
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-movie_recommendation_dev}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data/
     ports:
       - "5432:5432"
+    networks:
+      - nexus_dev_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Redis Cache for Development
   redis:
-    image: redis:7
+    image: redis:7-alpine
+    container_name: nexus_dev_redis
     ports:
       - "6379:6379"
+    networks:
+      - nexus_dev_network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # Django Application for Development
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nexus_dev_web
     command: python manage.py runserver 0.0.0.0:8000
     volumes:
       - .:/app
+      - dev_logs:/app/logs
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=True
-      - SECRET_KEY=dev-secret-key-change-in-production
-      - DB_NAME=movie_recommendation_dev
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_HOST=db
-      - DB_PORT=5432
+      - DJANGO_SETTINGS_MODULE=config.settings.development
+      - ENVIRONMENT=development
+      - DEBUG=${DEBUG:-True}
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key-change-in-production}
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-movie_recommendation_dev}
       - REDIS_URL=redis://redis:6379/0
       - TMDB_API_KEY=${TMDB_API_KEY}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
+    networks:
+      - nexus_dev_network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
       interval: 30s
@@ -57,4 +71,11 @@ services:
       start_period: 40s
 
 volumes:
-  postgres_data:
+  postgres_dev_data:
+    driver: local
+  dev_logs:
+    driver: local
+
+networks:
+  nexus_dev_network:
+    driver: bridge

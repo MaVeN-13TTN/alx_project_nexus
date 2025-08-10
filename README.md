@@ -180,12 +180,11 @@ GET    /api/docs/                       - Swagger documentation
 
 ### Prerequisites
 
-- Python 3.9+
-- PostgreSQL 13+
-- Redis 6+
+- Docker & Docker Compose
+- Git
 - TMDb API Key
 
-### Installation
+### Quick Start (Development)
 
 1. **Clone the repository**
 
@@ -194,94 +193,128 @@ GET    /api/docs/                       - Swagger documentation
    cd alx_project_nexus
    ```
 
-2. **Create virtual environment**
+2. **Setup development environment**
 
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   # Make scripts executable
+   chmod +x scripts/manage-environments.sh
+   
+   # Setup and start development environment
+   ./scripts/manage-environments.sh dev setup
    ```
 
-3. **Install dependencies**
+3. **Access the application**
+   - **API**: http://localhost:8000
+   - **Admin**: http://localhost:8000/admin/
+   - **API Docs**: http://localhost:8000/api/docs/
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Environment Management
 
-4. **Environment setup**
+```bash
+# Development environment
+./scripts/manage-environments.sh dev start    # Start services
+./scripts/manage-environments.sh dev logs     # View logs
+./scripts/manage-environments.sh dev shell web # Access Django shell
 
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+# Staging environment
+./scripts/manage-environments.sh staging start
+./scripts/manage-environments.sh staging migrate
 
-5. **Database setup**
+# Production environment
+./scripts/manage-environments.sh prod start
+./scripts/manage-environments.sh prod backup
+./scripts/manage-environments.sh prod health
+```
 
-   ```bash
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
+### Environment Configuration
 
-6. **Create superuser**
+The project supports three environments with separate configuration:
 
-   ```bash
-   python manage.py createsuperuser
-   ```
+- **Development**: `.env.dev` (from `.env.example`)
+- **Staging**: `.env.staging` (from `.env.staging.example`)
+- **Production**: `.env.production` (from `.env.production.example`)
 
-7. **Run the server**
-   ```bash
-   python manage.py runserver
-   ```
-
-### Environment Variables
-
-Create a `.env` file in the project root:
-
+**Development Example**:
 ```env
+# Environment
+DJANGO_SETTINGS_MODULE=config.settings.development
+ENVIRONMENT=development
+
 # Django Settings
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=your-dev-secret-key
 DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
 
-# Database
-DB_NAME=movie_recommendation_db
-DB_USER=your_db_user
-DB_PASSWORD=your_db_password
-DB_HOST=localhost
-DB_PORT=5432
+# Database (SQLite for development)
+DATABASE_URL=sqlite:///db.sqlite3
 
-# Redis
-REDIS_URL=redis://localhost:6379/0
+# Cache (Local memory for development)
+REDIS_URL=redis://redis:6379/0
 
 # TMDb API
 TMDB_API_KEY=your-tmdb-api-key
-TMDB_BASE_URL=https://api.themoviedb.org/3
-
-# JWT Settings
-JWT_SECRET_KEY=your-jwt-secret-key
-JWT_ALGORITHM=HS256
-JWT_EXPIRATION_DELTA=86400
 ```
 
-## 🐳 Docker Setup
+**Production Example**:
+```env
+# Environment
+DJANGO_SETTINGS_MODULE=config.settings.production
+ENVIRONMENT=production
 
-### Using Docker Compose
+# Django Settings
+SECRET_KEY=your-very-secure-production-key
+DEBUG=False
+ALLOWED_HOSTS=nexus.k1nyanjui.com
 
-1. **Build and run containers**
+# Database (PostgreSQL for production)
+DATABASE_URL=postgresql://user:pass@db:5432/movie_recommendation_prod
 
-   ```bash
-   docker-compose up --build
-   ```
+# Security
+SECURE_SSL_REDIRECT=True
+SESSION_COOKIE_SECURE=True
+CSRF_COOKIE_SECURE=True
+```
 
-2. **Run migrations**
+## 🐳 Multi-Environment Docker Setup
 
-   ```bash
-   docker-compose exec web python manage.py migrate
-   ```
+### Development Environment
 
-3. **Create superuser**
-   ```bash
-   docker-compose exec web python manage.py createsuperuser
-   ```
+```bash
+# Start development environment
+./scripts/manage-environments.sh dev start
+
+# View logs
+./scripts/manage-environments.sh dev logs
+
+# Access Django shell
+./scripts/manage-environments.sh dev shell web
+```
+
+### Staging Environment
+
+```bash
+# Start staging environment
+./scripts/manage-environments.sh staging start
+
+# Run migrations
+./scripts/manage-environments.sh staging migrate
+
+# View status
+./scripts/manage-environments.sh staging status
+```
+
+### Production Environment
+
+```bash
+# Start production environment
+./scripts/manage-environments.sh prod start
+
+# Create database backup
+./scripts/manage-environments.sh prod backup
+
+# Run health checks
+./scripts/manage-environments.sh prod health
+```
 
 ## 🧪 Testing
 
@@ -322,24 +355,49 @@ Interactive API documentation is available at:
 - **Swagger UI**: `http://localhost:8000/api/docs/`
 - **ReDoc**: `http://localhost:8000/api/redoc/`
 
-## 🚀 Deployment
+## 🚀 Multi-Environment Deployment
 
-### Production Checklist
+### Environment Overview
 
-- [ ] Set `DEBUG=False`
-- [ ] Configure production database
-- [ ] Set up Redis in production
-- [ ] Configure static files serving
-- [ ] Set up SSL certificates
-- [ ] Configure logging
-- [ ] Set up monitoring
+| Environment | Purpose | URL | Branch |
+|-------------|---------|-----|--------|
+| Development | Local development | http://localhost:8000 | develop |
+| Staging | Pre-production testing | https://staging-nexus.k1nyanjui.com | staging |
+| Production | Live application | https://nexus.k1nyanjui.com | main |
 
-### Deployment Platforms
+### Deployment Workflow
 
-- **Heroku**: Ready with `Procfile` and `runtime.txt`
-- **AWS**: ECS/Fargate deployment ready
-- **DigitalOcean**: App Platform compatible
-- **Railway**: One-click deployment
+1. **Develop locally**:
+   ```bash
+   ./scripts/manage-environments.sh dev start
+   # Make changes and test
+   ```
+
+2. **Deploy to staging**:
+   ```bash
+   git checkout staging
+   git merge develop
+   git push origin staging  # Auto-deploys via GitHub Actions
+   ```
+
+3. **Deploy to production**:
+   ```bash
+   git checkout main
+   git merge staging
+   git push origin main  # Auto-deploys via GitHub Actions
+   ```
+
+### Manual Deployment
+
+- Go to GitHub Actions → CI/CD Pipeline → Run workflow
+- Select target environment (development/staging/production)
+- Click "Run workflow"
+
+### VPS Deployment
+
+For detailed VPS deployment instructions, see:
+- [Multi-Environment Guide](docs/MULTI_ENVIRONMENT_GUIDE.md)
+- [VPS Deployment Guide](docs/VPS_DEPLOYMENT_GUIDE.md)
 
 ## 🤝 Contributing
 
@@ -366,77 +424,43 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Django Documentation](https://docs.djangoproject.com/) for excellent framework documentation
 - [ALX Africa](https://www.alxafrica.com/) for the ProDev Backend Program
 
-## 🚀 CI/CD & Docker Deployment
-
-This project uses GitHub Actions for continuous integration and Docker Compose for deployment automation.
+## 🚀 CI/CD & Deployment
 
 ### GitHub Actions Workflows
 
-- **CI/CD Pipeline**: Automated testing, building, and deployment
-- **Dependency Updates**: Weekly automated dependency updates
-- **Release Management**: Automated releases and changelog generation
-- **Security Scanning**: Vulnerability scanning and code quality checks
-- **Docker Validation**: Docker Compose configuration validation
+- **CI/CD Pipeline**: Automated testing, building, and multi-environment deployment
+- **Configuration Validation**: Docker Compose and environment file validation
 
-### Docker Deployment Options
+### Deployment Options
 
-#### Option 1: Development Environment
-
+#### Development Environment
 ```bash
-# Start development environment
-docker-compose up --build
-
-# Run migrations
-docker-compose exec web python manage.py migrate
-
-# Create superuser
-docker-compose exec web python manage.py createsuperuser
+./scripts/manage-environments.sh dev setup
+./scripts/manage-environments.sh dev start
 ```
 
-#### Option 2: Production VPS Deployment
-
+#### VPS Deployment (Production + Staging)
 ```bash
-# Clone repository on VPS
+# Clone and deploy
 git clone https://github.com/MaVeN-13TTN/alx_project_nexus.git
 cd alx_project_nexus
-
-# Configure environment
 cp .env.vps.example .env
-nano .env  # Edit with your values
-
-# Deploy with production compose
-docker-compose -f docker-compose.vps.yml up -d
-
-# Run automated deployment script
+# Edit .env with your values
 ./scripts/deploy-vps.sh
 ```
 
 ### Pipeline Features
 
-- ✅ Code quality checks (Black, Flake8, MyPy)
-- ✅ Security scanning (Bandit, Safety, Trivy)
+- ✅ Multi-environment deployment (dev/staging/production)
+- ✅ Code quality checks and security scanning
 - ✅ Automated testing with coverage reports
-- ✅ Multi-arch Docker builds (amd64, arm64)
-- ✅ Docker Compose validation
+- ✅ Docker image building and validation
 - ✅ Post-deployment health checks
-- ✅ Automated container updates
 
-### Deployment Architecture
+### Documentation
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Nginx Proxy   │───▶│   Django API    │───▶│   PostgreSQL    │
-│   (SSL/TLS)     │    │   (Gunicorn)    │    │   (Database)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                              │
-                              ▼
-                       ┌─────────────────┐    ┌─────────────────┐
-                       │   Redis Cache   │    │   TMDb API      │
-                       │   (Sessions)    │    │   (External)    │
-                       └─────────────────┘    └─────────────────┘
-```
-
-See [VPS Deployment Guide](docs/VPS_DEPLOYMENT_GUIDE.md) for detailed deployment instructions.
+- [VPS Deployment Guide](docs/VPS_DEPLOYMENT_GUIDE.md) - Complete deployment instructions
+- [API Documentation](docs/API_DOCUMENTATION.md) - Complete API reference
 
 ## �📊 Project Status
 

@@ -1,4 +1,4 @@
-name: Docker Compose Validation
+name: Configuration Validation
 
 on:
   push:
@@ -10,9 +10,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  validate-docker-compose:
+  validate-config:
     runs-on: ubuntu-latest
-    name: Validate Docker Compose Configuration
+    name: Validate Configuration Files
 
     steps:
       - name: Checkout code
@@ -30,14 +30,6 @@ jobs:
             exit 1
           fi
           echo "✅ Development docker-compose.yml validated successfully"
-
-      - name: Validate production docker-compose
-        run: |
-          if ! docker-compose -f docker-compose.prod.yml config > /dev/null 2>&1; then
-            echo "Error: Production docker-compose.prod.yml validation failed"
-            exit 1
-          fi
-          echo "✅ Production docker-compose.prod.yml validated successfully"
 
       - name: Validate VPS docker-compose
         run: |
@@ -64,7 +56,7 @@ jobs:
   test-docker-build:
     runs-on: ubuntu-latest
     name: Test Docker Build Process
-    needs: validate-docker-compose
+    needs: validate-config
 
     steps:
       - name: Checkout code

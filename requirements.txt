@@ -1,17 +1,47 @@
-# Requirements files for Python dependencies
+# Python dependencies for all environments
 
-# Base requirements
+# Django Core
 django>=4.2.0,<4.3.0
 djangorestframework>=3.14.0
 django-cors-headers>=4.3.0
+drf-spectacular>=0.26.0
+
+# Database & Cache
 psycopg2-binary>=2.9.0
 dj-database-url>=2.1.0
-djangorestframework-simplejwt>=5.3.0
 django-redis>=5.4.0
 redis>=5.0.0
+
+# Authentication
+djangorestframework-simplejwt>=5.3.0
+
+# External APIs
 requests>=2.31.0
+
+# Configuration
 python-decouple>=3.8
+
+# Background Tasks
 celery>=5.3.0
-drf-spectacular>=0.26.0
+
+# Production Server
 gunicorn>=21.2.0
 whitenoise>=6.6.0
+
+# Development & Testing (conditional)
+black>=23.0.0; extra == "dev"
+isort>=5.12.0; extra == "dev"
+flake8>=6.0.0; extra == "dev"
+mypy>=1.5.0; extra == "dev"
+pre-commit>=3.4.0; extra == "dev"
+pytest>=7.4.0; extra == "dev"
+pytest-django>=4.7.0; extra == "dev"
+pytest-cov>=4.1.0; extra == "dev"
+pytest-mock>=3.11.0; extra == "dev"
+factory-boy>=3.3.0; extra == "dev"
+coverage>=7.3.0; extra == "dev"
+bandit>=1.7.0; extra == "dev"
+safety>=2.3.0; extra == "dev"
+django-debug-toolbar>=4.2.0; extra == "dev"
+django-extensions>=3.2.0; extra == "dev"
+ipython>=8.15.0; extra == "dev"

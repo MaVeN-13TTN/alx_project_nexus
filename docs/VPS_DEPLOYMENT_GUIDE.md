@@ -1,6 +1,8 @@
 # VPS Deployment Guide for Nexus Movie Recommendation Backend
 
-## 🏗️ VPS Setup Requirements
+## 🏗️ Multi-Environment VPS Setup
+
+This guide covers deploying **both staging and production** environments on a single VPS using domain-based routing.
 
 ### 1. Server Specifications (Contabo VPS)
 
@@ -9,12 +11,12 @@
 - **Storage**: 50GB+ SSD
 - **CPU**: 2+ cores
 - **IP**: 161.97.116.5
-- **Domain**: nexus.k1nyanjui.com ✅
 
 ### 2. DNS Configuration ✅ COMPLETED
 
 ```bash
-nexus.k1nyanjui.com → 161.97.116.5
+nexus.k1nyanjui.com → 161.97.116.5 (Production)
+staging-nexus.k1nyanjui.com → 161.97.116.5 (Staging)
 ndungu.k1nyanjui.com → 161.97.116.5
 k1nyanjui.com → 161.97.116.5
 ```
@@ -62,7 +64,7 @@ sudo ufw allow 443/tcp
 sudo ufw enable
 ```
 
-### Step 3: Deploy Nexus Application
+### Step 3: Deploy Multi-Environment Application
 
 ```bash
 # Navigate to projects directory
@@ -74,7 +76,7 @@ cd nexus
 
 # Make deployment script executable
 chmod +x scripts/deploy-vps.sh
-chmod +x scripts/manage-nexus.sh
+chmod +x scripts/manage-environments.sh
 
 # Run the deployment script
 ./scripts/deploy-vps.sh
@@ -87,10 +89,12 @@ chmod +x scripts/manage-nexus.sh
 nano /home/deploy/projects/nexus/.env
 
 # Fill in these required values:
-DB_USER=movie_api_user
-DB_PASSWORD=your_secure_password_here
+DJANGO_SETTINGS_MODULE=config.settings.multi_environment
 SECRET_KEY=your_very_long_secret_key_minimum_50_characters
+DB_USER=prod_user
+DB_PASSWORD=your_secure_password_here
 TMDB_API_KEY=your_tmdb_api_key_here
+ALLOWED_HOSTS=nexus.k1nyanjui.com,staging-nexus.k1nyanjui.com,161.97.116.5,localhost
 ```
 
 ### Step 5: SSL Certificate Setup
@@ -108,14 +112,14 @@ sudo certbot --nginx -d nexus.k1nyanjui.com
 ```bash
 cd /home/deploy/projects/nexus
 
-# Start all services
-./scripts/manage-nexus.sh start
+# Start all services (serves both environments)
+docker-compose -f docker-compose.vps.yml up -d
 
 # Check status
-./scripts/manage-nexus.sh status
+docker-compose -f docker-compose.vps.yml ps
 
 # View logs
-./scripts/manage-nexus.sh logs
+docker-compose -f docker-compose.vps.yml logs -f
 ```
 
 ## 📁 Directory Structure After Deployment
@@ -144,29 +148,30 @@ cd /home/deploy/projects/nexus
 
 ```bash
 # Check application status
-./scripts/manage-nexus.sh status
+docker-compose -f docker-compose.vps.yml ps
 
 # View logs
-./scripts/manage-nexus.sh logs
+docker-compose -f docker-compose.vps.yml logs -f
 
 # Restart services
-./scripts/manage-nexus.sh restart
+docker-compose -f docker-compose.vps.yml restart
 
 # Health check
-./scripts/manage-nexus.sh health
+curl -f https://nexus.k1nyanjui.com/api/health/
+curl -f https://staging-nexus.k1nyanjui.com/api/health/
 ```
 
 ### Updates and Maintenance
 
 ```bash
 # Update application
-./scripts/manage-nexus.sh update
+./scripts/deploy-vps.sh
 
 # Create database backup
-./scripts/manage-nexus.sh backup
+docker-compose -f docker-compose.vps.yml exec db pg_dump -U prod_user movie_recommendation_prod > backup_$(date +%Y%m%d).sql
 
 # Clean up Docker resources
-./scripts/manage-nexus.sh cleanup
+docker system prune -f
 ```
 
 ### Troubleshooting
@@ -186,8 +191,13 @@ cd /home/deploy/projects/nexus
 ## 🌐 URLs and Access
 
 - **Production URL**: https://nexus.k1nyanjui.com
-- **Health Check**: https://nexus.k1nyanjui.com/api/health/
-- **Admin Panel**: https://nexus.k1nyanjui.com/admin/
+- **Staging URL**: https://staging-nexus.k1nyanjui.com
+- **Health Check**: 
+  - Production: https://nexus.k1nyanjui.com/api/health/
+  - Staging: https://staging-nexus.k1nyanjui.com/api/health/
+- **Admin Panel**: 
+  - Production: https://nexus.k1nyanjui.com/admin/
+  - Staging: https://staging-nexus.k1nyanjui.com/admin/
 
 ## 🔒 Security Considerations
 
@@ -227,6 +237,14 @@ docker-compose -f docker-compose.vps.yml logs -f
 docker-compose -f docker-compose.vps.yml logs web
 docker-compose -f docker-compose.vps.yml logs db
 ```
+
+### Environment Detection
+
+The application automatically detects the environment based on the domain:
+- `nexus.k1nyanjui.com` → Production database
+- `staging-nexus.k1nyanjui.com` → Staging database
+
+Both use the same codebase but separate data stores.
 
 ### System Monitoring
 
@@ -324,4 +342,4 @@ curl -f -k https://nexus.k1nyanjui.com/api/health/
 docker ps
 ```
 
-This setup provides a production-ready deployment of your Movie Recommendation Backend on your Contabo VPS with proper security, monitoring, and management capabilities.
+This setup provides a production-ready multi-environment deployment serving both staging and production from a single VPS with proper security, monitoring, and management capabilities.
