@@ -68,6 +68,16 @@ LOGGING = {
 if CURRENT_ENV == "staging":
     # Staging-specific overrides
     DEBUG = True
+    
+    # Override strict production SSL settings for staging
+    SECURE_SSL_REDIRECT = False  # Allow both HTTP and HTTPS in staging
+    SECURE_HSTS_SECONDS = 0      # Disable HSTS for staging
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = False
+    SECURE_HSTS_PRELOAD = False
+    
+    # More relaxed security for staging
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
 
     # Staging database
     DATABASES = {
