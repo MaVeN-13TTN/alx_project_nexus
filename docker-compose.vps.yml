@@ -43,7 +43,9 @@ services:
 
   # Django Application for VPS
   web:
-    image: ghcr.io/maven-13ttn/alx_project_nexus:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: nexus_vps_web
     restart: unless-stopped
     environment:
