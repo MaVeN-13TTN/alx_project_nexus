@@ -273,7 +273,14 @@ SPECTACULAR_SETTINGS = {
     - **TMDb Integration**: Real-time movie data from The Movie Database
     - **Advanced Recommendations**: Multiple algorithms including matrix factorization, neural collaborative filtering
     - **User Management**: Comprehensive user profiles, preferences, and viewing history
+    - **Multi-Environment**: Single application serving both staging and production via domain detection
     - **Performance Optimized**: Redis caching and optimized database queries
+    
+    ## Environment Information
+    This API supports multiple environments with automatic detection based on the domain:
+    - **Production**: nexus.k1nyanjui.com (optimized for performance)
+    - **Staging**: staging-nexus.k1nyanjui.com (debug features enabled)
+    - **Development**: localhost:8000 (full development features)
     
     ## Authentication
     This API uses JWT (JSON Web Tokens) for authentication. To access protected endpoints:
@@ -310,6 +317,10 @@ SPECTACULAR_SETTINGS = {
             "url": "https://nexus.k1nyanjui.com",
             "description": "Production server",
         },
+        {
+            "url": "https://staging-nexus.k1nyanjui.com",
+            "description": "Staging server",
+        },
     ],
     "EXTERNAL_DOCS": {
         "description": "Project Documentation",
@@ -321,6 +332,11 @@ SPECTACULAR_SETTINGS = {
         "displayOperationId": False,
         "filter": True,
         "tryItOutEnabled": True,
+        "defaultModelsExpandDepth": 1,
+        "defaultModelExpandDepth": 2,
+        "docExpansion": "list",
+        "supportedSubmitMethods": ["get", "post", "put", "delete", "patch"],
+        "validatorUrl": None,
     },
     "REDOC_UI_SETTINGS": {
         "hideDownloadButton": False,
@@ -328,6 +344,14 @@ SPECTACULAR_SETTINGS = {
         "hideLoading": False,
         "hideSchemaPattern": True,
         "simpleOneOfTypeLabel": True,
+        "scrollYOffset": 0,
+        "theme": {
+            "colors": {
+                "primary": {
+                    "main": "#1976d2"
+                }
+            }
+        }
     },
     "PREPROCESSING_HOOKS": [],
     "POSTPROCESSING_HOOKS": [],
